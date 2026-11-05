@@ -1,6 +1,6 @@
 {
   "name": "lanterna",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Hub per home server: gestione container Docker e monitoraggio del sistema",
   "main": "src/server.js",
   "private": true,

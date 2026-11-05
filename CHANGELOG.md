@@ -4,6 +4,8 @@ Tutte le modifiche rilevanti di Lanterna. Formato basato su [Keep a Changelog](h
 
 ## [Non rilasciato]
 
+## [0.2.0] - 2026-11-05
+
 ### Aggiunto
 - Barra unica con la RAM usata da ogni container, la quota del sistema e la memoria libera
 - Limite alla dimensione dei log nel `docker-compose.yml` (3 file da 1 MB)
