@@ -58,6 +58,26 @@ Lanterna controlla Docker e l'host, quindi ha privilegi elevati: **non esporla s
 | `/:/host:ro` | Spazio dei dischi (sola lettura) |
 | `privileged: true` | Lettura SMART dei dischi |
 
+## Log
+
+```bash
+docker logs lanterna
+```
+
+Il `docker-compose.yml` limita i log a 3 file da 1 MB: i più vecchi vengono eliminati automaticamente.
+Se aggiungi Lanterna a un compose esistente, copia anche la sezione `logging:`.
+
+Per applicare lo stesso limite a **tutti** i container, crea o modifica `/etc/docker/daemon.json`:
+
+```json
+{
+  "log-driver": "json-file",
+  "log-opts": { "max-size": "10m", "max-file": "3" }
+}
+```
+
+poi `sudo systemctl restart docker`. Vale solo per i container creati dopo: ricreali con `docker compose up -d --force-recreate`.
+
 ## Sviluppo
 
 ```bash

@@ -4,6 +4,9 @@ Tutte le modifiche rilevanti di Lanterna. Formato basato su [Keep a Changelog](h
 
 ## [Non rilasciato]
 
+### Aggiunto
+- Limite alla dimensione dei log nel `docker-compose.yml` (3 file da 1 MB)
+
 ## [0.1.0]
 
 Prima versione pubblica.

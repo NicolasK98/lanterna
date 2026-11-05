@@ -23,3 +23,9 @@ services:
       - /:/host:ro
     # Necessario per leggere SMART e temperature dei dischi
     privileged: true
+    # Limita la dimensione dei log (max 3 file da 1 MB, i più vecchi vengono eliminati)
+    logging:
+      driver: json-file
+      options:
+        max-size: "1m"
+        max-file: "3"
