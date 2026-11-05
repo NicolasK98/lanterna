@@ -68,6 +68,14 @@
       <div class="card-icon">🐳</div>
       <div><h2>Container Docker</h2><small id="containers-sub">Servizi</small></div>
     </div>
+    <div id="container-mem" class="cmem" hidden>
+      <div class="disk-info">
+        <span>RAM dei container</span>
+        <span id="cmem-total" class="cmem-total"></span>
+      </div>
+      <div id="cmem-bar" class="cmem-bar" role="img"></div>
+      <div id="cmem-legend" class="cmem-legend"></div>
+    </div>
     <div id="containers-list"><small class="muted">Caricamento container...</small></div>
   </div>
 
@@ -180,6 +188,7 @@
 
   // ---- Container -----------------------------------------------------------
   async function loadContainers() {
+    loadContainerMemory(); // in parallelo: le statistiche Docker sono più lente della lista
     const list = $('containers-list');
     try {
       const containers = await api('/containers');
@@ -204,6 +213,48 @@
       }));
     } catch (e) {
       list.replaceChildren(el('small', { class: 'error', text: 'Errore nel caricamento dei container' }));
+    }
+  }
+
+  // ---- RAM dei container (barra segmentata unica) ---------------------------
+  // Colori categorici in ordine fisso; ogni container mantiene il suo colore
+  // perché lo slot dipende dal nome (ordine alfabetico), non dal consumo.
+  const SERIES = ['#3987e5', '#d95926', '#199e70', '#c98500', '#d55181', '#008300', '#9085e9'];
+  const OTHER_COLOR = '#8a8f98';   // "Altri container" oltre il 7°
+  const SYSTEM_COLOR = '#4b5260';  // RAM usata fuori dai container
+
+  const formatMem = b => b >= 1024 ** 3 ? `${(b / 1024 ** 3).toFixed(1)} GB` : `${Math.round(b / 1024 ** 2)} MB`;
+
+  async function loadContainerMemory() {
+    try {
+      const m = await api('/containers/memory');
+      const sorted = [...m.containers].sort((a, b) => a.name.localeCompare(b.name));
+      const parts = sorted.slice(0, SERIES.length).map((c, i) => ({ name: c.name, value: c.usage, color: SERIES[i] }));
+      const rest = sorted.slice(SERIES.length);
+      if (rest.length) parts.push({ name: `Altri (${rest.length})`, value: rest.reduce((s, c) => s + c.usage, 0), color: OTHER_COLOR });
+      const containersTotal = m.containers.reduce((s, c) => s + c.usage, 0);
+      const system = Math.max(0, m.used - containersTotal);
+      parts.push({ name: 'Sistema e altro', value: system, color: SYSTEM_COLOR });
+
+      const pct = v => (v / m.total) * 100;
+      $('cmem-total').textContent = `${formatMem(containersTotal)} · ${pct(containersTotal).toFixed(0)}% di ${formatMem(m.total)}`;
+
+      const visible = parts.filter(p => p.value > 0);
+      const bar = $('cmem-bar');
+      bar.setAttribute('aria-label', visible.map(p => `${p.name} ${formatMem(p.value)} (${pct(p.value).toFixed(1)}%)`).join(', ') + `, libera ${formatMem(m.total - m.used)}`);
+      bar.replaceChildren(...visible.map(p => el('div', {
+        class: 'cmem-seg',
+        style: `width:${pct(p.value)}%;background:${p.color}`,
+        title: `${p.name}: ${formatMem(p.value)} (${pct(p.value).toFixed(1)}%)`,
+      })));
+
+      $('cmem-legend').replaceChildren(...visible.map(p => el('span', { class: 'cmem-item' },
+        el('span', { class: 'cmem-swatch', style: `background:${p.color}` }),
+        el('span', { text: p.name }),
+        el('span', { class: 'cmem-value', text: formatMem(p.value) }))));
+      $('container-mem').hidden = false;
+    } catch (e) {
+      $('container-mem').hidden = true;
     }
   }
 

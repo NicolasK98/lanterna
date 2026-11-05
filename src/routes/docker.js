@@ -1,6 +1,7 @@
 // Gestione container tramite Docker Engine API (socket), senza CLI né shell.
 const express = require('express');
 const os = require('os');
+const si = require('systeminformation');
 const config = require('../config');
 const { request } = require('../lib/unixHttp');
 
@@ -31,6 +32,41 @@ router.get('/containers', async (req, res) => {
   } catch (err) {
     console.error('Errore lista container:', err.message);
     res.status(502).json({ error: 'Impossibile contattare Docker' });
+  }
+});
+
+// RAM usata da un container, calcolata come fa "docker stats" (esclusa la page cache)
+async function containerMemory(id) {
+  try {
+    const { status, data } = await docker({
+      path: `/containers/${encodeURIComponent(id)}/stats?stream=false&one-shot=true`,
+      timeout: 5000,
+    });
+    if (status !== 200 || !data || !data.memory_stats) return null;
+    const m = data.memory_stats;
+    const s = m.stats || {};
+    const cache = s.inactive_file ?? s.total_inactive_file ?? 0; // cgroup v2 / v1
+    return typeof m.usage === 'number' ? Math.max(0, m.usage - cache) : null;
+  } catch {
+    return null;
+  }
+}
+
+router.get('/containers/memory', async (req, res) => {
+  try {
+    const [containers, mem] = await Promise.all([listContainers(), si.mem()]);
+    const running = containers.filter(c => c.running);
+    const usages = await Promise.all(running.map(c => containerMemory(c.id)));
+    res.json({
+      total: mem.total,
+      used: mem.active, // RAM usata dall'intero host
+      containers: running
+        .map((c, i) => ({ id: c.id, name: c.name, usage: usages[i] }))
+        .filter(c => c.usage !== null),
+    });
+  } catch (err) {
+    console.error('Errore memoria container:', err.message);
+    res.status(502).json({ error: 'Impossibile leggere la memoria dei container' });
   }
 });
 

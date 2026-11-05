@@ -119,3 +119,16 @@ footer { text-align: center; margin-top: 20px; color: var(--text-muted); font-si
 .update-banner code { font-family: ui-monospace, monospace; font-size: .68rem; color: var(--text-secondary); }
 footer a { color: inherit; text-decoration: none; }
 footer a:hover { color: var(--text-secondary); }
+
+/* Barra RAM dei container: un'unica barra segmentata */
+.cmem { margin-bottom: 16px; padding-bottom: 14px; border-bottom: 1px solid var(--border); }
+.cmem[hidden] { display: none; }
+.cmem-total { color: var(--text-secondary); font-weight: 600; }
+.cmem-bar { display: flex; gap: 2px; width: 100%; height: 8px; overflow: hidden; background: rgba(148, 163, 184, .1); border-radius: 999px; }
+.cmem-seg { height: 100%; min-width: 2px; transition: width .5s ease; }
+.cmem-seg:first-child { border-radius: 999px 0 0 999px; }
+.cmem-seg:hover { filter: brightness(1.25); }
+.cmem-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 10px; }
+.cmem-item { display: inline-flex; align-items: center; gap: 6px; color: var(--text-secondary); font-size: .7rem; }
+.cmem-swatch { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+.cmem-value { color: var(--text-muted); }
