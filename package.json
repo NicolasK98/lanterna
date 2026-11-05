@@ -1,0 +1,17 @@
+{
+  "name": "lanterna",
+  "version": "0.1.0",
+  "description": "Hub per home server: gestione container Docker e monitoraggio del sistema",
+  "main": "src/server.js",
+  "private": true,
+  "scripts": {
+    "start": "node src/server.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "systeminformation": "^5.23.0"
+  }
+}

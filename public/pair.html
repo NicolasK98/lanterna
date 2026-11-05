@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lanterna · Abbina dispositivo</title>
+  <link rel="icon" type="image/png" href="icon.png">
+  <link rel="apple-touch-icon" href="icon.png">
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#0b1120">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="container">
+  <div class="card pair-card">
+    <div class="card-title">
+      <div class="card-icon">🔑</div>
+      <div>
+        <h2>Abbina questo dispositivo</h2>
+        <small>Serve solo la prima volta</small>
+      </div>
+    </div>
+    <p>
+      Inserisci il codice di abbinamento. Lo trovi nei log del container
+      (<code>docker logs lanterna</code>) oppure è quello impostato in <code>PAIRING_CODE</code>.
+      Dopo l'abbinamento questo dispositivo verrà ricordato.
+    </p>
+    <form id="pair-form">
+      <label class="field">
+        <span>Codice</span>
+        <input id="code" class="code" inputmode="numeric" autocomplete="one-time-code" required autofocus>
+      </label>
+      <label class="field">
+        <span>Nome del dispositivo</span>
+        <input id="name" maxlength="40" required>
+      </label>
+      <button class="btn btn-primary" type="submit">Abbina</button>
+      <div id="msg" class="form-msg"></div>
+    </form>
+  </div>
+</div>
+<script>
+  function guessDeviceName() {
+    const ua = navigator.userAgent;
+    if (/iPhone/.test(ua)) return 'iPhone';
+    if (/iPad/.test(ua)) return 'iPad';
+    if (/Android/.test(ua)) return 'Android';
+    if (/Windows/.test(ua)) return 'PC Windows';
+    if (/Macintosh/.test(ua)) return 'Mac';
+    if (/Linux/.test(ua)) return 'PC Linux';
+    return 'Dispositivo';
+  }
+
+  document.getElementById('name').value = guessDeviceName();
+
+  // Se già abbinato, vai direttamente alla dashboard
+  fetch('api/auth/status').then(r => r.json()).then(s => { if (s.paired) location.replace('./'); }).catch(() => {});
+
+  document.getElementById('pair-form').addEventListener('submit', async e => {
+    e.preventDefault();
+    const msg = document.getElementById('msg');
+    msg.className = 'form-msg muted';
+    msg.textContent = 'Verifica in corso...';
+    try {
+      const res = await fetch('api/auth/pair', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          code: document.getElementById('code').value,
+          name: document.getElementById('name').value,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Errore');
+      location.replace('./');
+    } catch (err) {
+      msg.className = 'form-msg error';
+      msg.textContent = err.message;
+    }
+  });
+</script>
+</body>
+</html>

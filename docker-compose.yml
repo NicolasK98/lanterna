@@ -1,0 +1,25 @@
+services:
+  lanterna:
+    # Immagine pubblicata su GitHub Container Registry    image: ghcr.io/nicolask98/lanterna:latest
+    # Per sviluppare in locale commenta "image" e usa:
+    # build: .
+    container_name: lanterna
+    restart: unless-stopped
+    ports:
+      - "${LANTERNA_PORT:-8081}:8081"
+    env_file:
+      - path: .env
+        required: false
+    volumes:
+      # Dati persistenti (dispositivi abbinati)
+      - ./data:/data
+      # Gestione container
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Stato Tailscale (LocalAPI)
+      - /run/tailscale/tailscaled.sock:/run/tailscale/tailscaled.sock
+      # Riavvio/spegnimento host via systemd-logind
+      - /run/dbus/system_bus_socket:/run/dbus/system_bus_socket
+      # Lettura spazio dischi dell'host (sola lettura)
+      - /:/host:ro
+    # Necessario per leggere SMART e temperature dei dischi
+    privileged: true

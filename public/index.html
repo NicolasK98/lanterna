@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lanterna</title>
+  <link rel="icon" type="image/png" href="icon.png">
+  <link rel="apple-touch-icon" href="icon.png">
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Lanterna">
+  <meta name="theme-color" content="#0b1120">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="container">
+  <header>
+    <div class="brand">
+      <div class="brand-icon"><img src="icon.png" alt="Lanterna"></div>
+      <div class="brand-text">
+        <h1>Lanterna</h1>
+        <span>Home Server Hub</span>
+      </div>
+    </div>
+    <div class="server-state"><span class="state-dot"></span>ONLINE</div>
+  </header>
+
+  <a id="update-banner" class="update-banner" target="_blank" rel="noopener" hidden>
+    <span>⬆</span>
+    <span>È disponibile <strong id="update-version"></strong>. Aggiorna con <code>docker compose pull &amp;&amp; docker compose up -d</code></span>
+  </a>
+
+  <div class="card">
+    <div class="card-title">
+      <div class="card-icon">⚙</div>
+      <div><h2>Hardware & Dischi</h2><small id="uptime">Stato del sistema</small></div>
+    </div>
+    <div class="hardware-grid">
+      <div class="metric-card"><div class="metric-label">Utilizzo CPU</div><div id="cpu-load" class="metric-value">--%</div></div>
+      <div class="metric-card"><div class="metric-label">Temperatura CPU</div><div id="cpu-temp" class="metric-value">-- °C</div></div>
+      <div class="metric-card"><div class="metric-label">Memoria RAM</div><div id="mem" class="metric-value">--%</div></div>
+      <div class="metric-card"><div class="metric-label">RAM usata</div><div id="mem-detail" class="metric-value">--</div></div>
+    </div>
+    <div id="disks-list"><small class="muted">Caricamento spazio dischi...</small></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">
+      <div class="card-icon">🌐</div>
+      <div><h2>Stato Rete</h2><small>Connettività remota</small></div>
+    </div>
+    <div class="status-item">
+      <div class="status-left">
+        <div class="status-icon">🔗</div>
+        <div>
+          <div class="status-name">Tailscale</div>
+          <div id="tailscale-sub" class="status-sub">Connessione VPN del server</div>
+        </div>
+      </div>
+      <span id="tailscale-status" class="badge offline">Controllo...</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">
+      <div class="card-icon">🐳</div>
+      <div><h2>Container Docker</h2><small id="containers-sub">Servizi</small></div>
+    </div>
+    <div id="containers-list"><small class="muted">Caricamento container...</small></div>
+  </div>
+
+  <div class="card" id="power-card" hidden>
+    <div class="card-title">
+      <div class="card-icon">🔌</div>
+      <div><h2>Controllo Sistema</h2><small>Operazioni sul server host</small></div>
+    </div>
+    <div class="system-actions">
+      <button class="btn btn-system btn-warning" data-power="reboot">↻ &nbsp; RIAVVIA</button>
+      <button class="btn btn-system btn-danger" data-power="poweroff">SPEGNI</button>
+    </div>
+  </div>
+
+  <div class="card" id="devices-card" hidden>
+    <div class="card-title">
+      <div class="card-icon">📱</div>
+      <div><h2>Dispositivi abbinati</h2><small>Chi può accedere a Lanterna</small></div>
+    </div>
+    <div id="devices-list"></div>
+  </div>
+
+  <footer>
+    <a href="https://github.com/NicolasK98/lanterna" target="_blank" rel="noopener">Lanterna <span id="version"></span></a>
+    · Made with ❤️ by <a href="https://github.com/NicolasK98" target="_blank" rel="noopener">Nicolas</a>
+  </footer>
+</div>
+
+<script>
+  // ---- Utility -------------------------------------------------------------
+  const $ = id => document.getElementById(id);
+
+  // Crea un elemento con classi, testo e figli (mai innerHTML con dati del server)
+  function el(tag, props = {}, ...children) {
+    const node = document.createElement(tag);
+    for (const [k, v] of Object.entries(props)) {
+      if (k === 'class') node.className = v;
+      else if (k === 'text') node.textContent = v;
+      else if (k === 'style') node.style.cssText = v;
+      else if (k.startsWith('data-')) node.setAttribute(k, v);
+      else node[k] = v;
+    }
+    children.flat().filter(Boolean).forEach(c => node.append(c));
+    return node;
+  }
+
+  async function api(path, options = {}) {
+    const res = await fetch('api' + path, {
+      ...options,
+      headers: options.body ? { 'Content-Type': 'application/json' } : {},
+      body: options.body ? JSON.stringify(options.body) : undefined,
+    });
+    if (res.status === 401) { location.replace('pair.html'); throw new Error('Non abbinato'); }
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || `Errore ${res.status}`);
+    return data;
+  }
+
+  const gb = bytes => `${(bytes / 1024 ** 3).toFixed(0)}G`;
+  function formatUptime(sec) {
+    const d = Math.floor(sec / 86400), h = Math.floor((sec % 86400) / 3600), m = Math.floor((sec % 3600) / 60);
+    return `Acceso da ${d ? d + 'g ' : ''}${h}h ${m}m`;
+  }
+  const formatDate = iso => new Date(iso).toLocaleString('it-IT', { dateStyle: 'short', timeStyle: 'short' });
+
+  // ---- Hardware ------------------------------------------------------------
+  async function loadStats() {
+    try {
+      const s = await api('/stats');
+      $('cpu-load').textContent = `${s.cpu.load}%`;
+      $('cpu-temp').textContent = s.cpu.temp != null ? `${s.cpu.temp} °C` : 'N/A';
+      $('mem').textContent = `${s.memory.usePercent}%`;
+      $('mem-detail').textContent = `${(s.memory.used / 1024 ** 3).toFixed(1)} / ${(s.memory.total / 1024 ** 3).toFixed(0)}G`;
+      $('uptime').textContent = formatUptime(s.uptime);
+
+      const list = $('disks-list');
+      if (!s.disks.length) return list.replaceChildren(el('small', { class: 'muted', text: 'Nessun disco rilevato' }));
+
+      list.replaceChildren(...s.disks.map(d => {
+        const color = d.usePercent > 85 ? 'var(--red)' : 'var(--accent)';
+        const health = d.health === 'PASSED' ? el('span', { class: 'health', text: '● OK' })
+          : d.health === 'FAILED' ? el('span', { class: 'health fail', text: '● GUASTO' }) : null;
+        return el('div', { class: 'disk' },
+          el('div', { class: 'disk-header' },
+            el('span', { class: 'disk-name' }, d.label, ' ', health),
+            el('span', { class: 'disk-temp', text: d.temp != null ? `${d.temp} °C` : '' })),
+          el('div', { class: 'disk-info' },
+            el('span', {}, `${gb(d.used)} / ${gb(d.size)} `, el('span', { class: 'muted', text: `· ${gb(d.available)} liberi` })),
+            el('span', { style: `font-weight:700;color:${color}`, text: `${d.usePercent}%` })),
+          el('div', { class: 'progress' },
+            el('div', { class: 'progress-fill', style: `width:${d.usePercent}%;background:${color}` })));
+      }));
+    } catch (e) {
+      $('disks-list').replaceChildren(el('small', { class: 'error', text: 'Errore caricamento statistiche' }));
+    }
+  }
+
+  // ---- Tailscale -----------------------------------------------------------
+  async function loadTailscale() {
+    const badge = $('tailscale-status');
+    try {
+      const t = await api('/status/tailscale');
+      badge.textContent = !t.available ? 'N/D' : t.running ? 'ATTIVO' : 'DISATTIVO';
+      badge.className = `badge ${t.running ? 'online' : 'offline'}`;
+      $('tailscale-sub').textContent = t.running && t.ips.length ? `${t.hostname} · ${t.ips[0]}` : 'Connessione VPN del server';
+    } catch (e) {
+      badge.textContent = 'ERRORE';
+    }
+  }
+
+  // ---- Container -----------------------------------------------------------
+  async function loadContainers() {
+    const list = $('containers-list');
+    try {
+      const containers = await api('/containers');
+      const running = containers.filter(c => c.running).length;
+      $('containers-sub').textContent = `${running} attivi su ${containers.length}`;
+      if (!containers.length) return list.replaceChildren(el('small', { class: 'muted', text: 'Nessun container trovato' }));
+
+      list.replaceChildren(...containers.map(c => {
+        const dot = c.running ? 'var(--green)' : 'var(--red)';
+        const actions = c.running
+          ? [el('button', { class: 'btn btn-restart', text: '↻ Riavvia', 'data-action': 'restart', 'data-id': c.id, 'data-name': c.name }),
+             c.self ? null : el('button', { class: 'btn btn-stop', text: '■ Ferma', 'data-action': 'stop', 'data-id': c.id, 'data-name': c.name })]
+          : [el('button', { class: 'btn btn-start', text: '▶ Avvia', 'data-action': 'start', 'data-id': c.id, 'data-name': c.name })];
+        return el('div', { class: 'container-item' },
+          el('div', { class: 'container-info' },
+            el('div', { class: 'container-name' },
+              el('span', { class: 'container-dot', style: `background:${dot};box-shadow:0 0 8px ${dot}` }),
+              c.name,
+              c.self ? el('span', { class: 'self-tag', text: 'questa app' }) : null),
+            el('div', { class: 'container-status', text: c.status })),
+          el('div', { class: 'container-actions' }, actions));
+      }));
+    } catch (e) {
+      list.replaceChildren(el('small', { class: 'error', text: 'Errore nel caricamento dei container' }));
+    }
+  }
+
+  const ACTION_LABEL = { start: 'avviare', stop: 'fermare', restart: 'riavviare' };
+  $('containers-list').addEventListener('click', async e => {
+    const btn = e.target.closest('button[data-action]');
+    if (!btn) return;
+    const { action, id, name } = btn.dataset;
+    if (!confirm(`Vuoi davvero ${ACTION_LABEL[action]} il container "${name}"?`)) return;
+    btn.disabled = true;
+    try {
+      await api(`/containers/${encodeURIComponent(id)}/${action}`, { method: 'POST', body: {} });
+    } catch (err) {
+      alert(`Errore: ${err.message}`);
+    }
+    loadContainers();
+  });
+
+  // ---- Alimentazione -------------------------------------------------------
+  const POWER_CONFIRM = {
+    reboot: "ATTENZIONE: verrà riavviato l'intero server host.",
+    poweroff: 'ATTENZIONE: sei sicuro di voler SPEGNERE il server?\n\nPer riaccenderlo dovrai farlo fisicamente o tramite Wake-on-LAN.',
+  };
+  document.querySelectorAll('[data-power]').forEach(btn => btn.addEventListener('click', async () => {
+    const action = btn.dataset.power;
+    if (!confirm(POWER_CONFIRM[action])) return;
+    try {
+      await api(`/power/${action}`, { method: 'POST', body: { confirm: action } });
+      alert(action === 'reboot' ? 'Riavvio in corso...' : 'Spegnimento in corso...');
+    } catch (err) {
+      alert(`Errore: ${err.message}`);
+    }
+  }));
+
+  // ---- Dispositivi ---------------------------------------------------------
+  async function loadDevices() {
+    try {
+      const auth = await api('/auth/status');
+      if (auth.mode === 'none') return;
+      const devices = await api('/auth/devices');
+      $('devices-card').hidden = false;
+      $('devices-list').replaceChildren(...devices.map(d => el('div', { class: 'container-item' },
+        el('div', { class: 'container-info' },
+          el('div', { class: 'container-name' }, d.name, d.current ? el('span', { class: 'device-tag', text: 'questo' }) : null),
+          el('div', { class: 'container-status', text: `Abbinato ${formatDate(d.createdAt)} · ultimo accesso ${formatDate(d.lastSeen)}` })),
+        el('button', { class: 'btn btn-stop', text: d.current ? 'Esci' : 'Rimuovi', 'data-device': d.id, 'data-current': d.current ? '1' : '', 'data-name': d.name }))));
+    } catch (e) { /* card resta nascosta */ }
+  }
+
+  $('devices-list').addEventListener('click', async e => {
+    const btn = e.target.closest('button[data-device]');
+    if (!btn) return;
+    const current = btn.dataset.current === '1';
+    if (!confirm(current ? 'Scollegare questo dispositivo? Dovrai abbinarlo di nuovo.' : `Rimuovere "${btn.dataset.name}"?`)) return;
+    try {
+      if (current) {
+        await api('/auth/logout', { method: 'POST', body: {} });
+        return location.replace('pair.html');
+      }
+      await api(`/auth/devices/${encodeURIComponent(btn.dataset.device)}`, { method: 'DELETE' });
+    } catch (err) {
+      alert(`Errore: ${err.message}`);
+    }
+    loadDevices();
+  });
+
+  // ---- Avvio ---------------------------------------------------------------
+  api('/version').then(v => { $('version').textContent = `v${v.version}`; }).catch(() => {});
+  api('/update').then(u => {
+    if (!u.updateAvailable) return;
+    $('update-version').textContent = `v${u.latest}`;
+    $('update-banner').href = u.url;
+    $('update-banner').hidden = false;
+  }).catch(() => {});
+  api('/power').then(p => { $('power-card').hidden = !p.enabled; }).catch(() => {});
+  loadStats(); loadTailscale(); loadContainers(); loadDevices();
+  setInterval(loadStats, 10000);
+  setInterval(loadTailscale, 30000);
+  setInterval(loadContainers, 15000);
+</script>
+</body>
+</html>

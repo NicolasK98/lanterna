@@ -1,0 +1,14 @@
+{
+  "name": "Lanterna",
+  "short_name": "Lanterna",
+  "description": "Hub per home server: container Docker e stato del sistema",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#080d18",
+  "theme_color": "#0b1120",
+  "lang": "it",
+  "icons": [
+    { "src": "icon.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}
