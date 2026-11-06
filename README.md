@@ -1,13 +1,28 @@
 # Lanterna
 
-Hub leggero per home server Ubuntu: gestisci i container Docker e tieni d'occhio lo stato del sistema da un'unica pagina, anche da smartphone.
+Hub leggero per home server Linux: gestisci i container Docker e tieni d'occhio lo stato del sistema da un'unica pagina, anche da smartphone.
 
 - CPU (utilizzo e temperatura), RAM, uptime
 - Spazio dischi con stato SMART e temperatura reali
-- Container Docker: stato, avvio, arresto, riavvio
+- Container Docker: stato, avvio, arresto, riavvio e RAM usata da ciascuno
 - Stato di Tailscale
 - Riavvio e spegnimento del server host
 - Accesso tramite **abbinamento dispositivi**: niente password, il dispositivo viene ricordato
+
+## Compatibilità
+
+Lanterna funziona su qualsiasi server **Linux con Docker** (immagini per `amd64` e `arm64`).
+
+| Funzione | Requisito sull'host |
+|---|---|
+| Container, CPU, RAM, dischi | Linux con Docker |
+| Stato SMART dei dischi | Dischi fisici e container `privileged` |
+| Tailscale | Tailscale installato (facoltativo, altrimenti mostra "N/D") |
+| Riavvio e spegnimento | systemd con D-Bus (systemd-logind) |
+
+- **Supporto completo:** Debian, Ubuntu, Linux Mint, Fedora, Rocky/Alma Linux, Arch, Proxmox VE, Raspberry Pi OS a 64 bit (Pi 4/5).
+- **Supporto parziale:** Unraid, Alpine e altri sistemi senza systemd funzionano, ma riavvio e spegnimento no: imposta `POWER_ACTIONS=false`. Su Synology/QNAP SMART e alimentazione potrebbero non funzionare.
+- **Non supportati:** Raspberry Pi OS a 32 bit (nessuna immagine `armv7`); Docker Desktop su Windows/macOS, dove si vedrebbe la macchina virtuale di Docker e non il computer reale.
 
 ## Installazione
 

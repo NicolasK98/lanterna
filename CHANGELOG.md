@@ -4,6 +4,9 @@ Tutte le modifiche rilevanti di Lanterna. Formato basato su [Keep a Changelog](h
 
 ## [Non rilasciato]
 
+### Documentazione
+- Il README indica la compatibilità con qualsiasi server Linux, non solo Ubuntu
+
 ## [0.2.1] - 2026-11-06
 
 ### Aggiunto
