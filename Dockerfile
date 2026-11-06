@@ -6,6 +6,9 @@ RUN apk add --no-cache smartmontools lsblk dbus
 
 WORKDIR /app
 ENV NODE_ENV=production
+# Senza limite V8 dimensiona l'heap sulla RAM dell'host e libera memoria pigramente.
+# 96 MB sono abbondanti per Lanterna (heap reale ~10-20 MB) e forzano GC più frequenti.
+ENV NODE_OPTIONS=--max-old-space-size=96
 
 COPY package*.json ./
 RUN if [ -f package-lock.json ]; then npm ci --omit=dev; else npm install --omit=dev; fi \

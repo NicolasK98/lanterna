@@ -4,6 +4,12 @@ Tutte le modifiche rilevanti di Lanterna. Formato basato su [Keep a Changelog](h
 
 ## [Non rilasciato]
 
+### Aggiunto
+- `/healthz` riporta la memoria del processo (rss, heap) per la diagnostica
+
+### Modificato
+- Heap di Node limitato a 96 MB (`NODE_OPTIONS`) per contenere la crescita della RAM
+
 ## [0.2.0] - 2026-11-05
 
 ### Aggiunto
