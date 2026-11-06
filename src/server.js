@@ -44,7 +44,17 @@ app.get('/api/version', (req, res) => res.json({ version }));
 
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
-app.listen(config.port, () => {
+const server = app.listen(config.port, () => {
   console.log(`Lanterna v${version} in ascolto sulla porta ${config.port}`);
   auth.logPairingInfo();
 });
+
+// Spegnimento pulito su "docker stop": chiude il server invece di attendere il kill forzato
+function shutdown(signal) {
+  console.log(`Ricevuto ${signal}, arresto in corso...`);
+  server.close(() => process.exit(0));
+  server.closeAllConnections();
+  setTimeout(() => process.exit(0), 3000).unref();
+}
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));

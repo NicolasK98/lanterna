@@ -2,7 +2,8 @@ FROM node:24-alpine
 
 # smartmontools: stato SMART dei dischi · lsblk: risalire dalla partizione al disco
 # dbus: riavvio/spegnimento dell'host tramite systemd-logind
-RUN apk add --no-cache smartmontools lsblk dbus
+# tzdata: fuso orario corretto nei log (variabile TZ)
+RUN apk add --no-cache smartmontools lsblk dbus tzdata
 
 WORKDIR /app
 ENV NODE_ENV=production

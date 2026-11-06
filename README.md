@@ -43,6 +43,7 @@ Tutte le opzioni sono in [`.env.example`](.env.example).
 | `POWER_ACTIONS` | `true` | Mostra i pulsanti riavvia/spegni |
 | `TRUST_PROXY` | vuoto | Da impostare se Lanterna è dietro un reverse proxy (es. `1` o una subnet) |
 | `UPDATE_CHECK` | `true` | Mostra un avviso quando su GitHub esce una nuova versione |
+| `TZ` | `Europe/Rome` | Fuso orario usato negli orari dei log |
 
 Vengono mostrati la root dell'host e i dischi montati in `/mnt`, `/media` e `/srv`.
 

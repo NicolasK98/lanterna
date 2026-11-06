@@ -4,11 +4,21 @@ Tutte le modifiche rilevanti di Lanterna. Formato basato su [Keep a Changelog](h
 
 ## [Non rilasciato]
 
+## [0.2.1] - 2026-11-06
+
 ### Aggiunto
 - `/healthz` riporta la memoria del processo (rss, heap) per la diagnostica
+- Fuso orario configurabile con `TZ` (default `Europe/Rome`)
+- `package-lock.json` generato automaticamente da GitHub Actions
 
 ### Modificato
+- La dashboard smette di aggiornarsi quando la scheda è nascosta e riprende quando torna visibile
 - Heap di Node limitato a 96 MB (`NODE_OPTIONS`) per contenere la crescita della RAM
+- Compose: `init: true`, filesystem in sola lettura con `/tmp` in RAM, `mem_limit: 192m`
+- Spegnimento pulito su `docker stop` (prima attendeva 10 secondi il kill forzato)
+
+### Corretto
+- Nel `docker-compose.yml` della repo la riga `image:` era finita dentro un commento
 
 ## [0.2.0] - 2026-11-05
 

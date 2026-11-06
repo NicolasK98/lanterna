@@ -330,10 +330,23 @@
     $('update-banner').hidden = false;
   }).catch(() => {});
   api('/power').then(p => { $('power-card').hidden = !p.enabled; }).catch(() => {});
-  loadStats(); loadTailscale(); loadContainers(); loadDevices();
-  setInterval(loadStats, 10000);
-  setInterval(loadTailscale, 30000);
-  setInterval(loadContainers, 15000);
+  loadDevices();
+
+  // Aggiornamento periodico solo con la scheda visibile: una scheda in background
+  // non deve far lavorare il server (df, smartctl, statistiche Docker...).
+  const POLLERS = [[loadStats, 10000], [loadTailscale, 30000], [loadContainers, 15000]];
+  let timers = [];
+  function startPolling() {
+    stopPolling();
+    POLLERS.forEach(([fn]) => fn());
+    timers = POLLERS.map(([fn, ms]) => setInterval(fn, ms));
+  }
+  function stopPolling() {
+    timers.forEach(clearInterval);
+    timers = [];
+  }
+  document.addEventListener('visibilitychange', () => (document.hidden ? stopPolling() : startPolling()));
+  startPolling();
 </script>
 </body>
 </html>

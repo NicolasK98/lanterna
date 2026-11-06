@@ -1,12 +1,17 @@
 services:
   lanterna:
-    # Immagine pubblicata su GitHub Container Registry    image: ghcr.io/nicolask98/lanterna:latest
+    # Immagine pubblicata su GitHub Container Registry
+    image: ghcr.io/nicolask98/lanterna:latest
     # Per sviluppare in locale commenta "image" e usa:
     # build: .
     container_name: lanterna
     restart: unless-stopped
+    # Processo init (tini): inoltra i segnali e raccoglie i processi figli
+    init: true
     ports:
       - "${LANTERNA_PORT:-8081}:8081"
+    environment:
+      TZ: ${TZ:-Europe/Rome}
     env_file:
       - path: .env
         required: false
@@ -21,6 +26,12 @@ services:
       - /run/dbus/system_bus_socket:/run/dbus/system_bus_socket
       # Lettura spazio dischi dell'host (sola lettura)
       - /:/host:ro
+    # Filesystem del container in sola lettura: si scrive solo in /data e /tmp
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m
+    # Rete di sicurezza sulla RAM (Lanterna ne usa normalmente 40-80 MB)
+    mem_limit: 192m
     # Necessario per leggere SMART e temperature dei dischi
     privileged: true
     # Limita la dimensione dei log (max 3 file da 1 MB, i più vecchi vengono eliminati)

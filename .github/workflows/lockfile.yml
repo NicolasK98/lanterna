@@ -1,0 +1,37 @@
+name: Lockfile
+
+# Genera/aggiorna package-lock.json quando cambia package.json,
+# così le build usano sempre le stesse versioni delle dipendenze (npm ci).
+on:
+  push:
+    branches: [main]
+    paths: ['package.json']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  lockfile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Genera package-lock.json
+        run: npm install --package-lock-only --ignore-scripts
+
+      - name: Commit se cambiato
+        run: |
+          if git status --porcelain package-lock.json | grep -q .; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add package-lock.json
+            git commit -m "Aggiorna package-lock.json"
+            git push
+          else
+            echo "package-lock.json già aggiornato"
+          fi
