@@ -1,4 +1,4 @@
-FROM node:24-alpine
+FROM node:25-alpine
 
 # smartmontools: stato SMART dei dischi · lsblk: risalire dalla partizione al disco
 # dbus: riavvio/spegnimento dell'host tramite systemd-logind
